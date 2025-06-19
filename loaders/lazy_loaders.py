@@ -3,7 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import SimpleITK as sitk
 import os
-from typing import Union, Callable, Any
+from typing import Union, Callable, Any, Dict
 from torchio.data import Subject
 import torchio as tio
 
@@ -95,8 +95,9 @@ class PatchDataloader(Dataset):
 
     def __init__(
         self,
-        images_dir: str,
-        labels_dir: str,
+        images_dir: str = None,
+        labels_dir: str = None,
+        images_labels_dict: Dict[str, str] = None,
         patch_size: Union[tuple, int] = None,
         sampling_method: str = "uniform",
         threshold: float = None,
@@ -106,17 +107,27 @@ class PatchDataloader(Dataset):
         repeat: int = 1,
         **kwargs,
     ):
-        self.images_dir = images_dir
-        self.labels_dir = labels_dir
+        if images_dir is not None and labels_dir is not None:
+            self.images_dir = images_dir
+            self.labels_dir = labels_dir
 
-        self.ids = os.listdir(self.labels_dir)
+            self.ids = os.listdir(self.labels_dir)
 
-        if repeat > 1:
-            self.ids = self.ids * repeat
+            if repeat > 1:
+                self.ids = self.ids * repeat
 
-        self.images = [os.path.join(self.images_dir, image_id) for image_id in self.ids]
-        self.labels = [os.path.join(self.labels_dir, image_id) for image_id in self.ids]
-
+            self.images = [os.path.join(self.images_dir, image_id) for image_id in self.ids]
+            self.labels = [os.path.join(self.labels_dir, image_id) for image_id in self.ids]
+        else:
+            #one_channel_images paths
+            self.images = [d["image"][0] for d in images_labels_dict]
+            # one_channel_labels paths
+            self.labels = [d["label"] for d in images_labels_dict]
+            
+            if repeat > 1:
+                self.images = self.images * repeat
+                self.labels = self.labels * repeat
+        
         if preprocessing is not None:
             self.preprocessing = preprocessing
         else:
@@ -153,7 +164,12 @@ class PatchDataloader(Dataset):
         else:
             self.threshold = 0.0
 
-        self.len = len(self.ids)
+        
+        if images_dir is not None and labels_dir is not None:
+            self.len = len(self.ids)
+        else:
+            self.len = len(self.images)
+        
 
         self.kwargs = kwargs
 

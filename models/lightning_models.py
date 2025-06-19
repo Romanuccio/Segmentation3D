@@ -103,7 +103,8 @@ class Unet3D(pl.LightningModule):
             y_pred = self(x)
 
         if y.dim() > 4:
-            y = y.squeeze(1)
+            pass
+            # y = y.squeeze(1)
 
         loss = self.loss(y, y_pred) * self.beta
 
