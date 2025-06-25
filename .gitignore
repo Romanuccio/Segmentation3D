@@ -16,3 +16,6 @@
 *.nii.gz
 __pycache__/
 /*.py
+lightning_logs/
+Gianluca_Mamamia/vp8k159t/checkpoints
+Gianluca_Mamamia/wandb/

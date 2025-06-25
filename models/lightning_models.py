@@ -100,14 +100,16 @@ class Unet3D(pl.LightningModule):
             y_pred = self((x, pos))
         else:
             x, y = batch
-            y_pred = self(x)
+            y_pred = self(x).squeeze(1)
 
         if y.dim() > 4:
-            pass
-            # y = y.squeeze(1)
-
+            y = y.squeeze(1)
+        # print(y.shape)
+        # y = y.squeeze(1)
+        # print(y.shape)
+        # print(y_pred.shape)
         loss = self.loss(y, y_pred) * self.beta
-
+        
         self.log(
             "train_loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=True
         )
@@ -132,13 +134,14 @@ class Unet3D(pl.LightningModule):
             verbose=False,
             positional=self.positional,
         )
-        volume_pred = volume_pred.unsqueeze(0)
+        # print(volume_pred.shape)
+        # volume_pred = volume_pred.unsqueeze(0)
 
+        # print(y.shape)
         if y.dim() > 4:
             y = y.squeeze(1)
 
         loss = self.loss(y, volume_pred) * self.beta
-
         self.log("val_loss", loss, prog_bar=True, logger=True)
 
         if self.metrics is not None:
@@ -157,7 +160,7 @@ class Unet3D(pl.LightningModule):
         Returns:
             pred (torch.Tensor): The predicted volume.
         """
-        volume = volume.squeeze().squeeze()
+        volume = volume.squeeze()
 
         return predict_tensor_patches(tensor=volume, model=self.model, **kwargs)
 

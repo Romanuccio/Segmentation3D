@@ -20,9 +20,12 @@ class JaccardLoss(torch.nn.Module):
         targets_one_hot = F.one_hot(targets.long(), num_classes=self.num_classes).float()
         targets_one_hot = torch.permute(targets_one_hot, (0, 4, 1, 2, 3))
 
+        # print(targets_one_hot.shape)
+        # print(inputs.shape)
         intersection = targets_one_hot * inputs
 
         # Reduce the last 3 dimension -> intersection shape = [batch_size, num_classes]
+        
         intersection_flat = intersection.view(B, self.num_classes, -1).sum(dim=2)
 
         union = inputs + targets_one_hot - intersection
