@@ -85,7 +85,7 @@ class Unet3D(pl.LightningModule):
         self.strides = kwargs.get("strides", (64, 64, 64))
         self.padding = kwargs.get("padding", "same")
 
-        self.beta = kwargs.get("beta", 100)
+        self.beta = kwargs.get("beta", 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.positional:
@@ -135,7 +135,7 @@ class Unet3D(pl.LightningModule):
             positional=self.positional,
         )
         # print(volume_pred.shape)
-        # volume_pred = volume_pred.unsqueeze(0)
+        volume_pred = volume_pred.unsqueeze(0)
 
         # print(y.shape)
         if y.dim() > 4:
@@ -148,7 +148,7 @@ class Unet3D(pl.LightningModule):
 
             for name, metric in self.metrics.items():
                 metric = metric.to(y)
-                self.log(f'val_{name}', metric(volume_pred, y), prog_bar=True, logger=True)
+                self.log(f'val_{name}', metric(volume_pred, y), prog_bar=True, logger=True, on_epoch=True)
 
     def predict_step(self, volume: torch.Tensor, **kwargs) -> torch.Tensor:
         """Prediction step of the model.
