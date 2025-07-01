@@ -175,6 +175,30 @@ class PatchDataloader(Dataset):
 
         self.kwargs = kwargs
 
+    def pad_to_patch_size(self, label, patch_size):
+        """
+        Pads a 3D label array to the specified patch size using constant 0 padding.
+
+        Args:
+            label (np.ndarray): Input 3D array (Z, Y, X).
+            patch_size (tuple): Desired size (depth, height, width).
+
+        Returns:
+            np.ndarray: Padded 3D array.
+        """
+        current_shape = label.shape
+        pad_width = []
+
+        for curr, target in zip(current_shape, patch_size[::-1]):
+            total_pad = max(0, target - curr)
+            pad_before = total_pad // 2
+            pad_after = total_pad - pad_before
+            pad_width.append((pad_before, pad_after))
+
+        return np.pad(label, pad_width, mode='constant', constant_values=0)
+
+
+
     def __getitem__(self, index):
         self.reader.SetFileName(self.labels[index])
         self.reader.ReadImageInformation()
@@ -186,6 +210,7 @@ class PatchDataloader(Dataset):
         else:
             patch_size = self.patch_size
 
+    
         while True:
             (
                 self.extract_idx_x,
@@ -196,14 +221,27 @@ class PatchDataloader(Dataset):
                 patch_size=patch_size,
                 **self.kwargs,
             )
+            
+            # find if padding is necessary: all should be >= 0
+            differences = [
+                self.x - (self.extract_idx_x + patch_size[0]),
+                self.y - (self.extract_idx_y + patch_size[1]),
+                self.z - (self.extract_idx_z + patch_size[2])
+                ]
+            
+            # if padding is needed, first extract smaller image
+            if any(x < 0 for x in differences):
+                extract_patch_size = [(patch + difference if difference < 0 else patch) for patch, difference in zip(patch_size, differences)]
+            else:
+                extract_patch_size = patch_size
 
             self.reader.SetExtractIndex(
                 (self.extract_idx_x, self.extract_idx_y, self.extract_idx_z)
             )
-            self.reader.SetExtractSize((patch_size[0], patch_size[1], patch_size[2]))
-
+            self.reader.SetExtractSize((extract_patch_size[0], extract_patch_size[1], extract_patch_size[2]))
             label = self.reader.Execute()
             label = sitk.GetArrayFromImage(label)
+            label = self.pad_to_patch_size(label, patch_size)
 
             if np.sum(label > 0.0) > self.threshold * (
                 patch_size[0] * patch_size[1] * patch_size[2]
@@ -214,6 +252,7 @@ class PatchDataloader(Dataset):
 
         image = self.reader.Execute()
         image = sitk.GetArrayFromImage(image)
+        image = self.pad_to_patch_size(image, patch_size)
 
         image = np.expand_dims(image, axis=0)
 

@@ -120,10 +120,11 @@ class Unet3D(pl.LightningModule):
         )
 
         if self.metrics is not None:
-
-            for name, metric in self.metrics.items():
-                metric = metric.to(y)
-                self.log(f'train_{name}', metric(y_pred, y), prog_bar=True, on_step=True, logger=True, on_epoch=True)
+            for name, metric in self.metrics:
+                self.log(f'train_{name}', metric(y_pred, y).mean(), prog_bar=True, on_step=False, logger=True, on_epoch=True)
+            # for name, metric in self.metrics.items():
+            #     metric = metric.to(y)
+            #     self.log(f'train_{name}', metric(y_pred, y), prog_bar=True, on_step=True, logger=True, on_epoch=True)
 
         return loss
 
@@ -156,10 +157,11 @@ class Unet3D(pl.LightningModule):
         self.log("val_loss", loss, prog_bar=True, logger=True, on_epoch=True)
 
         if self.metrics is not None:
-
-            for name, metric in self.metrics.items():
-                metric = metric.to(y)
-                self.log(f'val_{name}', metric(volume_pred, y), prog_bar=True, logger=True, on_epoch=True)
+            for name, metric in self.metrics:
+                self.log(f'val_{name}', metric(volume_pred, y).mean(), prog_bar=True, on_step=False, logger=True, on_epoch=True)
+            # for name, metric in self.metrics.items():
+            #     metric = metric.to(y)
+            #     self.log(f'val_{name}', metric(volume_pred, y), prog_bar=True, logger=True, on_epoch=True)
 
     def predict_step(self, volume: torch.Tensor, **kwargs) -> torch.Tensor:
         """Prediction step of the model.
@@ -210,7 +212,7 @@ class UnetIO(Unet3D):
         if self.metrics is not None:
             for name, metric in self.metrics.items():
                 metric = metric.to(y)
-                self.log(f'train_{name}', metric(y_pred, y), prog_bar=True, on_step=True, logger=True, on_epoch=True)
+                self.log(f'train_{name}', metric(y_pred, y).mean(), prog_bar=True, on_step=False, logger=True, on_epoch=True)
 
         return loss
     
