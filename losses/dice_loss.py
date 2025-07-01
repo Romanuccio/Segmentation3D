@@ -16,6 +16,8 @@ class DiceLoss(torch.nn.Module):
         if input.dim() == 5:
             input.squeeze(0)
         
+        
+        
         intersection = (input*ground_truth).sum(dim=(1,2,3))
         union = (input + ground_truth).sum(dim=(1,2,3))
         dice = 0 if union.sum() == 0 else 2*intersection/union

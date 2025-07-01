@@ -4,6 +4,7 @@ from utils.prediction_loops import predict_tensor_patches
 import numpy as np
 from typing import Union, Any, Optional, Callable
 import torchio as tio
+from monai.losses.dice import DiceLoss
 
 class Unet3D(pl.LightningModule):
     def __init__(
@@ -84,6 +85,7 @@ class Unet3D(pl.LightningModule):
         self.patch_size = kwargs.get("patch_size", (128, 128, 128))
         self.strides = kwargs.get("strides", (64, 64, 64))
         self.padding = kwargs.get("padding", "same")
+        self.monai = kwargs.get("monai", False)
 
         self.beta = kwargs.get("beta", 1)
 
@@ -102,13 +104,16 @@ class Unet3D(pl.LightningModule):
             x, y = batch
             y_pred = self(x).squeeze(1)
 
-        if y.dim() > 4:
-            y = y.squeeze(1)
-        # print(y.shape)
-        # y = y.squeeze(1)
-        # print(y.shape)
-        # print(y_pred.shape)
-        loss = self.loss(y, y_pred) * self.beta
+        # print(f'mean training prediction sigmoided: {torch.sigmoid(y_pred).mean()}')
+        if self.monai:
+            y = y.unsqueeze(1)
+            y_pred = y_pred.unsqueeze(1)
+            # print(f'training\nground truth shape: {y.shape}\npredicted shape: {y_pred.shape}')
+            loss = self.loss(y_pred, y) * self.beta
+        else:
+            if y.dim() > 4:
+                y = y.squeeze(1)
+            loss = self.loss(y, y_pred) * self.beta
         
         self.log(
             "train_loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=True
@@ -134,15 +139,21 @@ class Unet3D(pl.LightningModule):
             verbose=False,
             positional=self.positional,
         )
-        # print(volume_pred.shape)
-        volume_pred = volume_pred.unsqueeze(0)
+        # print(f'validation mean prediction sigmoided: {torch.sigmoid(volume_pred).mean()}')
 
-        # print(y.shape)
-        if y.dim() > 4:
-            y = y.squeeze(1)
 
-        loss = self.loss(y, volume_pred) * self.beta
-        self.log("val_loss", loss, prog_bar=True, logger=True)
+        if self.monai:
+            y = y.unsqueeze(1)
+            volume_pred = volume_pred.unsqueeze(1)
+            loss = self.loss(volume_pred, y) * self.beta
+            # print(f'validation\nground truth shape: {y.shape}\npredicted shape: {volume_pred.shape}\nloss: {loss}')
+        else:
+            volume_pred = volume_pred.unsqueeze(0)
+            if y.dim() > 4:
+                y = y.squeeze(1)
+            loss = self.loss(y, volume_pred) * self.beta
+        
+        self.log("val_loss", loss, prog_bar=True, logger=True, on_epoch=True)
 
         if self.metrics is not None:
 

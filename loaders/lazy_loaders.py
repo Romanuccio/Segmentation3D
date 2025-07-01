@@ -119,6 +119,8 @@ class PatchDataloader(Dataset):
             self.images = [os.path.join(self.images_dir, image_id) for image_id in self.ids]
             self.labels = [os.path.join(self.labels_dir, image_id) for image_id in self.ids]
         else:
+            self.images_dir = None
+            self.labels_dir = None
             #one_channel_images paths
             self.images = [d["image"][0] for d in images_labels_dict]
             # one_channel_labels paths
@@ -219,7 +221,13 @@ class PatchDataloader(Dataset):
             image = self.preprocessing(image)
 
         if self.transform is not None:
-            image, label = self.transform(image, label)
+            if self.images_dir is not None and self.labels_dir is not None:
+                image, label = self.transform(image, label)
+            else:
+                # dict based approach
+                data = {"image": image, "label": label}
+                data = self.transform(data)
+                image, label = data["image"], data["label"]
 
         image = torch.from_numpy(image).float()
         label = torch.from_numpy(label).float()
