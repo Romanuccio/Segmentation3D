@@ -175,7 +175,7 @@ class PatchDataloader(Dataset):
 
         self.kwargs = kwargs
 
-    def pad_to_patch_size(self, label, patch_size):
+    def PadToPatchSize(self, label, patch_size):
         """
         Pads a 3D label array to the specified patch size using constant 0 padding.
 
@@ -241,7 +241,7 @@ class PatchDataloader(Dataset):
             self.reader.SetExtractSize((extract_patch_size[0], extract_patch_size[1], extract_patch_size[2]))
             label = self.reader.Execute()
             label = sitk.GetArrayFromImage(label)
-            label = self.pad_to_patch_size(label, patch_size)
+            label = self.PadToPatchSize(label, patch_size)
 
             if np.sum(label > 0.0) > self.threshold * (
                 patch_size[0] * patch_size[1] * patch_size[2]
@@ -252,7 +252,7 @@ class PatchDataloader(Dataset):
 
         image = self.reader.Execute()
         image = sitk.GetArrayFromImage(image)
-        image = self.pad_to_patch_size(image, patch_size)
+        image = self.PadToPatchSize(image, patch_size)
 
         image = np.expand_dims(image, axis=0)
 
