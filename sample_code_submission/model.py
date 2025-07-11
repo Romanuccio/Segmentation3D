@@ -302,16 +302,16 @@ class Model:
             # box0 = sitk.Extract(raw_image0, size, start_index)
             # box0 = resample_sitk(box0, new_spacing=(1,1,1))
             
-            box1 = sitk.Extract(raw_image1, size, start_index)
-            box1_shape = box1.GetSize()
-            box1 = resample_sitk(box1, new_spacing=(1,1,1))
+            json_box = sitk.Extract(raw_image1, size, start_index)
+            json_box_shape = json_box.GetSize()
+            json_box = resample_sitk(json_box, new_spacing=(1,1,1))
             
             ### moving down to model input level
             # box_array0 = torch.tensor(sitk.GetArrayFromImage(box0)).to(device)[None, ...]
             # box_array0 = box_array0.transpose(1, 3)
             # image0 = transforms(box_array0)[None, ...]
             
-            box_array1 = torch.tensor(sitk.GetArrayFromImage(box1)).to(device)[None, ...]
+            box_array1 = torch.tensor(sitk.GetArrayFromImage(json_box), dtype=torch.float).to(device)[None, ...]
             box_array1 = box_array1.transpose(1, 3)
             image1 = box_array1[None, ...]
             
@@ -319,35 +319,36 @@ class Model:
             # input_image = torch.cat((image0, image1), dim=1)
             with torch.no_grad():
                 seg = model.predict_step(
-                    data,
+                    image1,
                     patch_size=patch_size,
                     strides=stride,
-                    padding="same", unpad=True, verbose=True
+                    padding="same", unpad=True, verbose=False
                 )
                 seg = threshold(sigmoid(seg))
+                # print(seg.shape)
                 
                 # seg = seg[:, 1:2, ...]
                 seg = torch.round(seg).to(torch.uint8)
             
-            ### resize to extracted bounding box dimensions back from model dimensions
-            box_resize = Resize(box1_shape, mode='nearest')
-            seg = box_resize(seg[0, ...])
-            seg = seg[0, ...]
-            seg = seg.int()
-            seg = seg.detach().cpu()
-            
-            ### sitk fuckery
-            imgseg = sitk.Image(raw_image1.GetSize(), raw_image1.GetPixelID())
-            zero_array = sitk.GetArrayFromImage(imgseg)
-            zero_array[x_min:x_max, y_min:y_max, z_min:z_max] = seg.transpose(0, 2)
-            imgseg = sitk.GetImageFromArray(zero_array)
-            imgseg.SetSpacing(raw_image1.GetSpacing())
-            imgseg.SetOrigin(raw_image1.GetOrigin())
-            imgseg.SetDirection(raw_image1.GetDirection())
-            imgseg.SetSpacing(raw_image1.GetSpacing())
-            
-            final_seg_path = os.path.join(output_dir_final, f"{patient_id}.nii.gz")
-            sitk.WriteImage(imgseg, final_seg_path)
+                ### resize to extracted bounding box dimensions back from model dimensions (because resampling)
+                box_resize = Resize(json_box_shape, mode='nearest')
+                seg = box_resize(seg)
+                seg = seg[0, ...]
+                seg = seg.int()
+                seg = seg.detach().cpu()
+                
+                ### sitk fuckery
+                imgseg = sitk.Image(raw_image1.GetSize(), raw_image1.GetPixelID())
+                zero_array = sitk.GetArrayFromImage(imgseg)
+                zero_array[x_min:x_max, y_min:y_max, z_min:z_max] = seg.transpose(0, 2)
+                imgseg = sitk.GetImageFromArray(zero_array)
+                imgseg.SetSpacing(raw_image1.GetSpacing())
+                imgseg.SetOrigin(raw_image1.GetOrigin())
+                imgseg.SetDirection(raw_image1.GetDirection())
+                imgseg.SetSpacing(raw_image1.GetSpacing())
+                
+                final_seg_path = os.path.join(output_dir_final, f"{patient_id}.nii.gz")
+                sitk.WriteImage(imgseg, final_seg_path)
 
         return output_dir_final
     
