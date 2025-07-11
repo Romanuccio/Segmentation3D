@@ -19,3 +19,9 @@ __pycache__/
 lightning_logs/
 Gianluca_Mamamia/vp8k159t/checkpoints
 Gianluca_Mamamia/wandb/
+sample_code_submission/models
+sample_code_submission/loaders
+sample_code_submission/losses
+sample_code_submission/modules
+sample_code_submission/src
+sample_code_submission/__init__.py
