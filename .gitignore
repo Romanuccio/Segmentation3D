@@ -6,7 +6,6 @@
 *.pdf
 *.csv
 *.xls
-*.ipynb
 *.log
 *.yaml
 *.wandb
@@ -15,7 +14,6 @@
 *.ckpt
 *.nii.gz
 __pycache__/
-/*.py
 lightning_logs/
 Gianluca_Mamamia/vp8k159t/checkpoints
 Gianluca_Mamamia/wandb/
