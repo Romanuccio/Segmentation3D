@@ -114,6 +114,8 @@ class GeometricProductDense(GeometricAlgebraLayer):
             self.activation = nn.Sigmoid()
         elif activation == 'tanh':
             self.activation = nn.Tanh()
+        else:
+            self.activation = nn.Identity()
         # else:
         #     self.activation = nn.Identity()
 
@@ -219,6 +221,12 @@ class GeometricSandwichProductDense(GeometricProductDense):
 
         if activation == "relu":
             self.activation = nn.ReLU()
+        elif activation == 'sigmoid':
+            self.activation = nn.Sigmoid()
+        elif activation == 'tanh':
+            self.activation = nn.Tanh()
+        else:
+            self.activation = nn.Identity()
 
         # Initialize kernel and bias (we can use Glorot uniform and zeros for bias)
         self.kernel_initializer = kernel_initializer
@@ -417,6 +425,12 @@ class GeometricSandwichProductElementwise(GeometricProductElementwise):
 
         if activation == "relu":
             self.activation = nn.ReLU()
+        elif activation == 'sigmoid':
+            self.activation = nn.Sigmoid()
+        elif activation == 'tanh':
+            self.activation = nn.Tanh()
+        else:
+            self.activation = nn.Identity()
 
         # Initialize kernel and bias (we can use Glorot uniform and zeros for bias)
         self.kernel_initializer = kernel_initializer
@@ -489,7 +503,7 @@ class GeometricProductConv1D(nn.Module):
         blade_indices_kernel: torch.Tensor,
         blade_indices_bias: torch.Tensor = None,
         dilations: int = 1,
-        activation: callable = None,
+        activation: str = None,
         use_bias=True,
         kernel_initializer="glorot_uniform",
         bias_initializer="zeros",
@@ -511,7 +525,15 @@ class GeometricProductConv1D(nn.Module):
         self.blade_indices_bias = blade_indices_bias
         self.num_input_filters = num_input_filters
         self.use_bias = use_bias
-        self.activation = activation
+        
+        if activation == "relu":
+            self.activation = nn.ReLU()
+        elif activation == 'sigmoid':
+            self.activation = nn.Sigmoid()
+        elif activation == 'tanh':
+            self.activation = nn.Tanh()
+        else:
+            self.activation = nn.Identity()
 
         # Initialize kernel and bias (we can use Glorot uniform and zeros for bias)
         self.kernel_initializer = kernel_initializer

@@ -12,18 +12,25 @@ from torchga.layers import (
 )
 from typing import List
 from collections.abc import Callable
+from enum import Enum, auto
+
+class FusionMode(Enum):
+    Concatenation = auto()
+    Clifford = auto()
+
 
 class RomanuccioEmbeddingBlock(nn.Module):
     def __init__(
         self,
         embedding_length: int,
         used_channels: List[int],
+        fusion_mode: FusionMode = FusionMode.Clifford,
         algebra_metric: List[int] = None,
         embedding_indices: List[int] = None,
         weight_blade_indices: torch.Tensor = None,
         real_reduction: Callable = None,
         depth=1,
-        activation="RELU",
+        giovanna_activation="RELU",
         norm=Norm.BATCH,
         *args,
         **kwargs
@@ -38,15 +45,8 @@ class RomanuccioEmbeddingBlock(nn.Module):
         embedding_length: length of 1 embedding in unet
         """
         super().__init__(*args, **kwargs)
-        if any(
-            x is None
-            for x in [
-                algebra_metric,
-                embedding_indices,
-                weight_blade_indices,
-                real_reduction,
-            ]
-        ):
+        self.fusion_mode = fusion_mode
+        if self.fusion_mode == FusionMode.Concatenation:
             print("Defining Giovanna model")
             self.to_ga_embeddings = None
             self.embedding_processing_block = Convolution(
@@ -57,9 +57,9 @@ class RomanuccioEmbeddingBlock(nn.Module):
                 kernel_size=3,
                 norm=norm,
                 bias=False,
-                act=activation,
+                act=giovanna_activation,
             )
-        else:
+        elif self.fusion_mode == FusionMode.Clifford:
             print("Defining Clifford model")
             self.ga = GeometricAlgebra(algebra_metric)
             self.to_ga_embeddings = nn.ModuleList()
@@ -82,11 +82,14 @@ class RomanuccioEmbeddingBlock(nn.Module):
                         use_bias=False,
                     )
                 )
+        else:
+            raise Exception("Incorrect fusion mode.")
 
     def forward(self, embeddings: list):
-        # embeddings is a list of individual embedding 1xN
+        # embeddings is a list of individual embedding batchxN, 
+        # where the length of the list is equal to number of modalities
 
-        if self.to_ga_embeddings is None:
+        if self.fusion_mode == FusionMode.Concatenation:
             # Giovanna way
             emb = embeddings[0]
 
@@ -100,7 +103,7 @@ class RomanuccioEmbeddingBlock(nn.Module):
             emb = self.embedding_processing_block(emb[:, None, :])
 
             return emb
-        else:
+        elif self.fusion_mode == FusionMode.Clifford:
             # Clifford way
 
             # embed tensors in ga
